@@ -1,0 +1,10 @@
+Service,Base_Price,Min_Price,Max_Price
+Venue,5000,3000,10000
+Catering,8000,4000,15000
+Photography,3000,1500,6000
+Music,2000,1000,5000
+Decor,2500,1500,4000
+Invitations,1000,500,2000
+Transport,1500,800,3000
+Security,2000,1000,4000
+Staff,1000,3000,5000
