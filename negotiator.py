@@ -1,12 +1,10 @@
 # negotiator.py - AI-powered negotiation helper
-# Written by [Your Name] for UtsavAi Internship Round 1
-
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 
 # Use the correct model ID from HuggingFace
-MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+MODEL_NAME = "Qwen/Qwen2-0.5B-Instruct"
 
 
 def load_negotiation_model():
@@ -25,28 +23,18 @@ def generate_negotiation_prompt(data):
     Creates a prompt for the AI vendor to respond to.
     Simulates a realistic vendor negotiation scenario with personalization.
     """
-    total_cost = data['total_cost']
-    event_type = data['event_type']
-    season = "Peak" if data['season'] == "yes" else "Off-Peak"
-    vendor_name = data['vendor_name']
-    planner_name = data['planner_name']
-    company_name = data['company_name'] or "Valued Client"
-    event_date = data['event_date']
-
     prompt = f"""
-You are {vendor_name}, an experienced event vendor.  
-{planner_name}, an event planner from {company_name}, has reached out about organizing a {event_type} on {event_date}.  
+You are {data['vendor_name']}, an experienced event vendor negotiating with {data['planner_name']} from {data['company_name']} about organizing a {data['event_type']} on {data['event_date']}.
 
-Here are the details:
-- Estimated cost: ₹{total_cost}
-- Event type: {event_type}
-- Season: {season}
+Here's what they've shared:
+- Total estimated cost: ₹{data['total_cost']}
+- Event type: {data['event_type']}
+- Season: {"Peak" if data['season'] == "yes" else "Off-Peak"}
+- Services requested: {', '.join(data['services'])}
 
-Respond as the vendor offering a fair and realistic discount based on the season and event size.  
-Include the final amount after discount.  
-Use a friendly but professional tone.  
-Do not use placeholders like [Your Name].  
-Make sure to keep the message concise and relevant.
+Please offer a fair discount and final price in a friendly way.
+Make sure to keep the tone professional but open to negotiation.
+Include a realistic closing with your name/company.
 
 Vendor Response:
 """
@@ -54,17 +42,21 @@ Vendor Response:
 
 
 def fetch_vendor_offer(prompt, tokenizer, model):
+    """
+    Gets a response from the AI vendor using the local LLM.
+    """
     print("💬 Talking to vendor AI...")
     inputs = tokenizer(prompt, return_tensors="pt")
-    inputs = {k: v.to(model.device) for k, v in inputs.items()}
 
-    output = model.generate(**inputs, max_new_tokens=350, do_sample=True, temperature=0.9, top_k=50)
-    decoded = tokenizer.decode(output[0], skip_special_tokens=True)
+    # Move input tensors to the same device as the model
+    device = model.device
+    inputs = {key: value.to(device) for key, value in inputs.items()}
 
-    # Extract only what the model generated after the prompt
-    if prompt in decoded:
-        response = decoded.split(prompt)[-1].strip()
-    else:
-        response = decoded.strip()
+    outputs = model.generate(**inputs, max_new_tokens=300, temperature=0.7, do_sample=True)
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+    # Clean up output
+    if "Vendor Response:" in response:
+        response = response.split("Vendor Response:")[-1].strip()
 
     return response
